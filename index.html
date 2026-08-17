@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CodeForge IDE</title>
+
+<!-- Xterm.js -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.js"></script>
+
+<!-- Monaco Editor loader -->
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.49.0/min/vs/loader.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg-0:#1b1d27;
+  --bg-1:#21232f;
+  --bg-2:#282a39;
+  --bg-3:#2f3142;
+  --bg-editor:#282c34;
+  --border:#3a3d52;
+  --border-soft:#33354a;
+  --text-0:#e6e6f0;
+  --text-1:#abb2bf;
+  --text-dim:#6c7086;
+  --accent:#c678dd;
+  --accent-2:#61afef;
+  --green:#98c379;
+  --yellow:#e5c07b;
+  --red:#e06c75;
+  --orange:#d19a66;
+  --cyan:#56b6c2;
+  --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  --radius: 8px;
+}
+*{box-sizing:border-box;}
+html,body{
+  margin:0;padding:0;height:100%;
+  background:var(--bg-0);
+  color:var(--text-0);
+  font-family:'Inter',system-ui,sans-serif;
+  overflow:hidden;
+}
+#app{
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  width:100vw;
+}
+
+/* ===== HEADER ===== */
+header{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:10px 18px;
+  background:linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  z-index:20;
+  box-shadow: var(--shadow);
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font-weight:800;
+  font-size:16.5px;
+  letter-spacing:0.2px;
+  margin-right:8px;
+  white-space:nowrap;
+}
+.brand-mark{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px; box-shadow:0 2px 10px rgba(198,120,221,0.45);
+}
+.brand span.sub{
+  color:var(--text-dim);
+  font-weight:500;
+  font-size:11px;
+  margin-left:4px;
+  border-left:1px solid var(--border);
+  padding-left:8px;
+}
+.lang-select-wrap{
+  position:relative;
+  display:flex;align-items:center;
+  background:var(--bg-3);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:0 8px 0 10px;
+  height:34px;
+}
+.lang-select-wrap img{width:16px;height:16px;}
+#languageSelect{
+  appearance:none;-webkit-appearance:none;
+  background:transparent;border:none;color:var(--text-0);
+  font-family:'JetBrains Mono',monospace;
+  font-size:12.5px;font-weight:600;
+  padding:0 20px 0 8px;height:32px;cursor:pointer;outline:none;
+}
+#languageSelect option{background:var(--bg-2);color:var(--text-0);}
+.lang-select-wrap::after{
+  content:'▾'; position:absolute; right:8px; color:var(--text-dim); pointer-events:none; font-size:11px;
+}
+.toolbar{display:flex;gap:8px;align-items:center;}
+.btn{
+  display:flex;align-items:center;gap:6px;
+  height:34px; padding:0 14px;
+  border-radius:6px; border:1px solid transparent;
+  font-family:'Inter',sans-serif; font-weight:600; font-size:12.5px;
+  cursor:pointer; transition:transform .08s ease, filter .15s ease, box-shadow .15s;
+  user-select:none;
+}
+.btn:active{transform:translateY(1px);}
+.btn-run{ background:linear-gradient(135deg,#98c379,#7fae5f); color:#0e1710; box-shadow:0 3px 12px rgba(152,195,121,0.35);}
+.btn-run:hover{filter:brightness(1.08);}
+.btn-run:disabled{opacity:.55;cursor:not-allowed;filter:none;}
+.btn-debug{ background:var(--bg-3); color:var(--yellow); border-color:var(--border);}
+.btn-debug:hover{ background:#383b52; }
+.btn-clear{ background:var(--bg-3); color:var(--text-1); border-color:var(--border);}
+.btn-clear:hover{ background:#383b52; color:var(--red);}
+.header-spacer{flex:1;}
+.runtime-pill{
+  display:flex;align-items:center;gap:7px;
+  font-size:11.5px; color:var(--text-dim);
+  background:var(--bg-3); border:1px solid var(--border);
+  border-radius:20px; padding:5px 12px 5px 10px;
+  font-family:'JetBrains Mono',monospace;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text-dim);transition:background .3s;}
+.dot.ready{background:var(--green); box-shadow:0 0 8px var(--green);}
+.dot.busy{background:var(--yellow); box-shadow:0 0 8px var(--yellow); animation:pulse 1s infinite;}
+.dot.err{background:var(--red); box-shadow:0 0 8px var(--red);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+/* ===== MAIN LAYOUT ===== */
+#main{
+  flex:1; display:flex; min-height:0; position:relative;
+}
+#editor-pane{
+  display:flex; flex-direction:column; min-width:200px;
+  background:var(--bg-editor);
+  flex-basis:62%;
+}
+#tabs{
+  display:flex; align-items:center;
+  background:var(--bg-1); border-bottom:1px solid var(--border);
+  flex-shrink:0; height:38px; padding:0 4px;
+}
+.file-tab{
+  display:flex; align-items:center; gap:7px;
+  height:100%; padding:0 16px;
+  font-family:'JetBrains Mono',monospace; font-size:12.5px;
+  color:var(--text-1);
+  border-right:1px solid var(--border-soft);
+  background:var(--bg-editor);
+  border-top:2px solid var(--accent-2);
+  position:relative;
+}
+.file-tab img{width:15px;height:15px;}
+.file-tab .dirty{width:7px;height:7px;border-radius:50%;background:var(--text-dim);margin-left:2px;}
+#monaco-container{flex:1; min-height:0;}
+
+#divider{
+  width:6px; cursor:col-resize; background:var(--bg-0);
+  flex-shrink:0; position:relative; z-index:5;
+}
+#divider:hover, #divider.dragging{ background:var(--accent-2); }
+#divider::after{
+  content:''; position:absolute; left:2.5px; top:0; bottom:0; width:1px; background:var(--border);
+}
+
+#panel{
+  display:flex; flex-direction:column; min-width:260px; flex-basis:38%;
+  background:var(--bg-1);
+}
+#panel-tabs{
+  display:flex; align-items:center; gap:2px;
+  background:var(--bg-2); border-bottom:1px solid var(--border);
+  height:38px; padding:0 8px; flex-shrink:0;
+}
+.panel-tab-btn{
+  display:flex; align-items:center; gap:6px;
+  height:30px; padding:0 12px; margin-top:2px;
+  border-radius:6px 6px 0 0;
+  font-size:12px; font-weight:600; color:var(--text-dim);
+  cursor:pointer; border-bottom:2px solid transparent;
+  transition: color .15s, background .15s;
+}
+.panel-tab-btn:hover{color:var(--text-1);}
+.panel-tab-btn.active{ color:var(--text-0); background:var(--bg-1); border-bottom:2px solid var(--accent-2);}
+.panel-tab-btn .badge{
+  background:var(--red); color:#fff; border-radius:10px;
+  font-size:10px; font-weight:700; padding:1px 6px; min-width:14px; text-align:center;
+  display:none;
+}
+.panel-tab-btn .badge.show{display:inline-block;}
+.panel-body{flex:1; min-height:0; position:relative;}
+#terminal-view, #problems-view{
+  position:absolute; inset:0; display:none; flex-direction:column;
+}
+#terminal-view.active, #problems-view.active{display:flex;}
+#terminal-container{flex:1; min-height:0; padding:8px 4px 0 10px;}
+
+#problems-view{overflow-y:auto; padding:10px;}
+.problems-empty{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; color:var(--text-dim); gap:10px; font-size:13px;
+}
+.problems-empty .big{font-size:34px; opacity:.5;}
+.problem-item{
+  display:flex; gap:12px; align-items:flex-start;
+  background:var(--bg-2); border:1px solid var(--border-soft);
+  border-left:3px solid var(--red);
+  border-radius:6px; padding:10px 12px; margin-bottom:8px;
+  cursor:pointer; transition:background .15s, transform .1s;
+}
+.problem-item:hover{ background:var(--bg-3); transform:translateX(2px);}
+.problem-item.warning{ border-left-color:var(--yellow); }
+.problem-icon{font-size:15px; margin-top:1px;}
+.problem-content{flex:1; min-width:0;}
+.problem-title{
+  font-weight:700; font-size:12.5px; color:var(--red);
+  font-family:'JetBrains Mono',monospace;
+}
+.problem-item.warning .problem-title{color:var(--yellow);}
+.problem-desc{
+  font-size:12px; color:var(--text-1); margin-top:3px; line-height:1.5;
+  font-family:'JetBrains Mono',monospace; word-break:break-word;
+}
+.problem-loc{
+  font-size:10.5px; color:var(--text-dim); margin-top:6px;
+  font-family:'JetBrains Mono',monospace;
+  display:flex; gap:10px;
+}
+.problem-loc span{background:var(--bg-1); padding:2px 7px; border-radius:4px; border:1px solid var(--border-soft);}
+.problems-summary{
+  font-size:11.5px; color:var(--text-dim); padding:2px 4px 12px 4px;
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* ===== STATUS BAR ===== */
+#statusbar{
+  display:flex; align-items:center; gap:18px;
+  background:linear-gradient(180deg,#5c3a91,#4a2f78);
+  color:#f1e9ff;
+  font-size:11.5px; font-family:'JetBrains Mono',monospace;
+  padding:4px 16px; flex-shrink:0; height:26px;
+}
+#statusbar .sep{width:1px; height:12px; background:rgba(255,255,255,0.25);}
+#statusbar .stat{display:flex; align-items:center; gap:5px;}
+#statusbar .spacer{flex:1;}
+
+/* Scrollbars */
+::-webkit-scrollbar{width:10px; height:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#454864; border-radius:6px; border:2px solid var(--bg-1);}
+::-webkit-scrollbar-thumb:hover{background:#565a7a;}
+
+.xterm{padding:2px;}
+.xterm .xterm-viewport{background:transparent !important;}
+
+@media (max-width: 820px){
+  #main{flex-direction:column;}
+  #divider{display:none;}
+  #editor-pane, #panel{flex-basis:50% !important;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">⚒️</div>
+      CodeForge <span style="color:var(--accent-2)">IDE</span>
+      <span class="sub">MULTI-LANGUAGE</span>
+    </div>
+
+    <div class="lang-select-wrap">
+      <img id="langIcon" src="" alt="" />
+      <select id="languageSelect">
+        <option value="python">Python 3</option>
+        <option value="javascript">JavaScript</option>
+        <option value="java">Java</option>
+        <option value="c">C</option>
+        <option value="cpp">C++</option>
+      </select>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn btn-run" id="runBtn">▶ Run</button>
+      <button class="btn btn-debug" id="debugBtn">🪲 Debug</button>
+      <button class="btn btn-clear" id="clearBtn">🧹 Clear</button>
+    </div>
+
+    <div class="header-spacer"></div>
+
+    <div class="runtime-pill">
+      <span class="dot" id="runtimeDot"></span>
+      <span id="runtimeText">Initializing…</span>
+    </div>
+  </header>
+
+  <div id="main">
+    <div id="editor-pane">
+      <div id="tabs"></div>
+      <div id="monaco-container"></div>
+    </div>
+
+    <div id="divider"></div>
+
+    <div id="panel">
+      <div id="panel-tabs">
+        <div class="panel-tab-btn active" data-tab="terminal">🖥️ TERMINAL</div>
+        <div class="panel-tab-btn" data-tab="problems">⚠️ PROBLEMS <span class="badge" id="problemsBadge">0</span></div>
+      </div>
+      <div class="panel-body">
+        <div id="terminal-view" class="active">
+          <div id="terminal-container"></div>
+        </div>
+        <div id="problems-view">
+          <div class="problems-empty" id="problemsEmpty">
+            <div class="big">✓</div>
+            <div>No problems detected</div>
+            <div style="font-size:11px">Run your code to see live diagnostics here</div>
+          </div>
+          <div id="problemsList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <div class="stat">⚡ Ln <span id="curLine">1</span>, Col <span id="curCol">1</span></div>
+    <div class="sep"></div>
+    <div class="stat" id="langStatus">Python 3</div>
+    <div class="sep"></div>
+    <div class="stat" id="engineStatus">Engine: Pyodide 0.26.4</div>
+    <div class="spacer"></div>
+    <div class="stat" id="statusMsg">Ready</div>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================================
+   CodeForge IDE — single-file multi-language web IDE
+   ========================================================================= */
+
+const ICONS = {
+  python:     'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg',
+  javascript: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg',
+  java:       'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg',
+  c:          'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/c/c-original.svg',
+  cpp:        'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg',
+};
+
+const FILE_NAMES = {
+  python: 'main.py', javascript: 'script.js', java: 'Main.java', c: 'main.c', cpp: 'main.cpp'
+};
+const MONACO_LANG = {
+  python: 'python', javascript: 'javascript', java: 'java', c: 'c', cpp: 'cpp'
+};
+const JUDGE0_LANG_ID = { java: 62, c: 50, cpp: 54 };
+
+const BOILERPLATE = {
+python:
+`# Welcome to CodeForge IDE
+# Real CPython, running via Pyodide inside a Web Worker.
+
+def greet(name):
+    return f"Hello, {name}! Welcome to CodeForge."
+
+name = input("What is your name? ")
+print(greet(name))
+
+total = 0
+for i in range(1, 6):
+    total += i
+print("Sum 1..5 =", total)
+`,
+javascript:
+`// Welcome to CodeForge IDE
+// Runs directly in the browser, output routed into the terminal.
+
+function greet(name) {
+  return \`Hello, \${name}! Welcome to CodeForge.\`;
+}
+
+console.log(greet("Developer"));
+
+let total = 0;
+for (let i = 1; i <= 5; i++) total += i;
+console.log("Sum 1..5 =", total);
+`,
+java:
+`public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, Developer! Welcome to CodeForge.");
+        int total = 0;
+        for (int i = 1; i <= 5; i++) total += i;
+        System.out.println("Sum 1..5 = " + total);
+    }
+}
+`,
+c:
+`#include <stdio.h>
+
+int main(void) {
+    printf("Hello, Developer! Welcome to CodeForge.\\n");
+    int total = 0;
+    for (int i = 1; i <= 5; i++) total += i;
+    printf("Sum 1..5 = %d\\n", total);
+    return 0;
+}
+`,
+cpp:
+`#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello, Developer! Welcome to CodeForge." << endl;
+    int total = 0;
+    for (int i = 1; i <= 5; i++) total += i;
+    cout << "Sum 1..5 = " << total << endl;
+    return 0;
+}
+`
+};
+
+let currentLang = 'python';
+let editor = null;
+let monacoNS = null;
+let models = {}; // lang -> monaco model (keeps per-language code + undo stack)
+let term = null;
+let fitAddon = null;
+let running = false;
+
+const SAB_SUPPORTED = typeof SharedArrayBuffer !== 'undefined' && typeof Atomics !== 'undefined' && window.crossOriginIsolated;
+
+/* ---------------------------------------------------------------------
+   Boot sequence
+--------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  initTerminal();
+  initTabs();
+  initLangSelector();
+  initMonaco().then(() => {
+    initDivider();
+    initButtons();
+    initPyodideWorker();
+    printBanner();
+  });
+});
+
+function printBanner(){
+  term.writeln('\x1b[1;35m╔══════════════════════════════════════════════╗\x1b[0m');
+  term.writeln('\x1b[1;35m║\x1b[0m   \x1b[1;36mCodeForge IDE\x1b[0m — genuine multi-language runtime  \x1b[1;35m║\x1b[0m');
+  term.writeln('\x1b[1;35m╚══════════════════════════════════════════════╝\x1b[0m');
+  if (!SAB_SUPPORTED){
+    term.writeln('\x1b[1;33m⚠ Cross-origin isolation not detected.\x1b[0m');
+    term.writeln('\x1b[33m  Interactive input() will fall back to line-buffered mode.\x1b[0m');
+    term.writeln('\x1b[33m  Serve with COOP/COEP headers to enable full SharedArrayBuffer input.\x1b[0m');
+  }
+  term.writeln('');
+  setStatus('Ready. Press ▶ Run to execute.');
+}
+
+/* ---------------------------------------------------------------------
+   Xterm terminal
+--------------------------------------------------------------------- */
+function initTerminal(){
+  term = new Terminal({
+    convertEol: true,
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: 13.5,
+    cursorBlink: true,
+    theme: {
+      background: '#21232f',
+      foreground: '#e6e6f0',
+      cursor: '#c678dd',
+      selectionBackground: '#3a3d52',
+      black:'#282a39', red:'#e06c75', green:'#98c379', yellow:'#e5c07b',
+      blue:'#61afef', magenta:'#c678dd', cyan:'#56b6c2', white:'#abb2bf',
+      brightBlack:'#6c7086', brightRed:'#f4747d', brightGreen:'#a8db8a',
+      brightYellow:'#f0cf8e', brightBlue:'#75bdf7', brightMagenta:'#d692ec',
+      brightCyan:'#6cc9d6', brightWhite:'#e6e6f0'
+    }
+  });
+  fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  term.loadAddon(new WebLinksAddon.WebLinksAddon());
+  term.open(document.getElementById('terminal-container'));
+  fitAddon.fit();
+  window.addEventListener('resize', () => fitAddon.fit());
+
+  term.onData(handleTerminalData);
+}
+
+/* ---- Interactive stdin handling (character by character) ---- */
+let stdinActive = false;
+let stdinLineBuffer = '';
+let onLineComplete = null; // callback(line)
+
+function handleTerminalData(data){
+  if (!stdinActive) return; // ignore keystrokes when not awaiting input
+  for (const ch of data){
+    const code = ch.charCodeAt(0);
+    if (ch === '\r' || ch === '\n'){
+      term.write('\r\n');
+      const line = stdinLineBuffer;
+      stdinLineBuffer = '';
+      stdinActive = false;
+      if (onLineComplete) { const cb = onLineComplete; onLineComplete = null; cb(line); }
+    } else if (code === 127 || code === 8){ // backspace
+      if (stdinLineBuffer.length > 0){
+        stdinLineBuffer = stdinLineBuffer.slice(0,-1);
+        term.write('\b \b');
+      }
+    } else if (code === 3){ // Ctrl+C
+      term.write('^C\r\n');
+      stdinLineBuffer = '';
+      stdinActive = false;
+      if (onLineComplete){ const cb = onLineComplete; onLineComplete = null; cb('__CTRL_C__'); }
+    } else if (code >= 32){
+      stdinLineBuffer += ch;
+      term.write(ch);
+    }
+  }
+}
+
+function requestTerminalLine(promptText, cb){
+  if (promptText) term.write(promptText);
+  stdinLineBuffer = '';
+  stdinActive = true;
+  onLineComplete = cb;
+}
+
+/* ---------------------------------------------------------------------
+   Panel tabs (Terminal / Problems)
+--------------------------------------------------------------------- */
+function initTabs(){
+  document.querySelectorAll('.panel-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.panel-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('terminal-view').classList.toggle('active', tab === 'terminal');
+      document.getElementById('problems-view').classList.toggle('active', tab === 'problems');
+      if (tab === 'terminal') setTimeout(() => fitAddon.fit(), 50);
+    });
+  });
+}
+
+function switchToPanel(tab){
+  document.querySelectorAll('.panel-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('terminal-view').classList.toggle('active', tab === 'terminal');
+  document.getElementById('problems-view').classList.toggle('active', tab === 'problems');
+  if (tab === 'terminal') setTimeout(() => fitAddon.fit(), 50);
+}
+
+/* ---------------------------------------------------------------------
+   Problems panel
+--------------------------------------------------------------------- */
+let problems = [];
+function clearProblems(){
+  problems = [];
+  renderProblems();
+}
+function addProblem(p){
+  // p: {line, col, type, message, severity}
+  problems.push(p);
+  renderProblems();
+}
+function renderProblems(){
+  const list = document.getElementById('problemsList');
+  const empty = document.getElementById('problemsEmpty');
+  const badge = document.getElementById('problemsBadge');
+  list.innerHTML = '';
+  if (problems.length === 0){
+    empty.style.display = 'flex';
+    badge.classList.remove('show');
+    return;
+  }
+  empty.style.display = 'none';
+  badge.classList.add('show');
+  badge.textContent = problems.length;
+
+  const summary = document.createElement('div');
+  summary.className = 'problems-summary';
+  summary.textContent = `${problems.length} problem${problems.length>1?'s':''} detected`;
+  list.appendChild(summary);
+
+  problems.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'problem-item' + (p.severity === 'warning' ? ' warning' : '');
+    el.innerHTML = `
+      <div class="problem-icon">${p.severity==='warning'?'⚠️':'⛔'}</div>
+      <div class="problem-content">
+        <div class="problem-title">${escapeHtml(p.type)}</div>
+        <div class="problem-desc">${escapeHtml(p.message)}</div>
+        <div class="problem-loc">
+          <span>Line ${p.line ?? '?'}</span>
+          ${p.col ? `<span>Col ${p.col}</span>` : ''}
+        </div>
+      </div>`;
+    el.addEventListener('click', () => {
+      if (editor && p.line){
+        editor.revealLineInCenter(p.line);
+        editor.setPosition({ lineNumber: p.line, column: p.col || 1 });
+        editor.focus();
+      }
+      switchToPanel('terminal');
+    });
+    list.appendChild(el);
+  });
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------------------------------------------------------------------
+   Monaco editor
+--------------------------------------------------------------------- */
+function initMonaco(){
+  return new Promise((resolve) => {
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.49.0/min/vs' } });
+    require(['vs/editor/editor.main'], function(){
+      monacoNS = monaco;
+
+      monaco.editor.defineTheme('one-dark-forge', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          { token: 'comment', foreground: '6c7086', fontStyle: 'italic' },
+          { token: 'keyword', foreground: 'c678dd' },
+          { token: 'string', foreground: '98c379' },
+          { token: 'number', foreground: 'd19a66' },
+          { token: 'type', foreground: 'e5c07b' },
+          { token: 'function', foreground: '61afef' },
+          { token: 'variable', foreground: 'e6e6f0' },
+          { token: 'identifier', foreground: 'e6e6f0' },
+          { token: 'operator', foreground: '56b6c2' },
+          { token: 'delimiter', foreground: 'abb2bf' },
+        ],
+        colors: {
+          'editor.background': '#282c34',
+          'editor.foreground': '#e6e6f0',
+          'editorLineNumber.foreground': '#495162',
+          'editorLineNumber.activeForeground': '#c678dd',
+          'editor.selectionBackground': '#3e4451',
+          'editor.lineHighlightBackground': '#2c313c',
+          'editorCursor.foreground': '#c678dd',
+          'editorIndentGuide.background': '#3b4048',
+          'editorIndentGuide.activeBackground': '#c678dd55',
+          'editorBracketMatch.background': '#515a6b55',
+          'editorBracketMatch.border': '#c678dd',
+          'editorWidget.background': '#21252b',
+          'editorSuggestWidget.background': '#21252b',
+          'editorSuggestWidget.border': '#3a3d52',
+        }
+      });
+
+      for (const lang of Object.keys(BOILERPLATE)){
+        models[lang] = monaco.editor.createModel(BOILERPLATE[lang], MONACO_LANG[lang]);
+      }
+
+      editor = monaco.editor.create(document.getElementById('monaco-container'), {
+        model: models[currentLang],
+        theme: 'one-dark-forge',
+        automaticLayout: true,
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 14,
+        fontLigatures: true,
+        minimap: { enabled: true, scale: 1 },
+        smoothScrolling: true,
+        cursorBlinking: 'smooth',
+        cursorSmoothCaretAnimation: 'on',
+        autoClosingBrackets: 'languageDefined',
+        autoClosingQuotes: 'languageDefined',
+        matchBrackets: 'always',
+        bracketPairColorization: { enabled: true },
+        autoIndent: 'full',
+        tabSize: 4,
+        renderLineHighlight: 'all',
+        scrollBeyondLastLine: false,
+        padding: { top: 14 },
+      });
+
+      editor.onDidChangeCursorPosition(e => {
+        document.getElementById('curLine').textContent = e.position.lineNumber;
+        document.getElementById('curCol').textContent = e.position.column;
+      });
+
+      renderFileTab();
+      resolve();
+    });
+  });
+}
+
+function renderFileTab(){
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  const tab = document.createElement('div');
+  tab.className = 'file-tab';
+  tab.innerHTML = `<img src="${ICONS[currentLang]}" alt="${currentLang}"/><span>${FILE_NAMES[currentLang]}</span><span class="dirty"></span>`;
+  tabs.appendChild(tab);
+}
+
+/* ---------------------------------------------------------------------
+   Language selector
+--------------------------------------------------------------------- */
+function initLangSelector(){
+  const sel = document.getElementById('languageSelect');
+  document.getElementById('langIcon').src = ICONS[currentLang];
+  sel.addEventListener('change', () => {
+    currentLang = sel.value;
+    document.getElementById('langIcon').src = ICONS[currentLang];
+    document.getElementById('langStatus').textContent =
+      { python:'Python 3', javascript:'JavaScript', java:'Java', c:'C', cpp:'C++' }[currentLang];
+    document.getElementById('engineStatus').textContent =
+      { python:'Engine: Pyodide 0.26.4', javascript:'Engine: Browser JS', java:'Engine: Judge0 CE',
+        c:'Engine: Judge0 CE', cpp:'Engine: Judge0 CE' }[currentLang];
+    if (editor && models[currentLang]) editor.setModel(models[currentLang]);
+    renderFileTab();
+    clearProblems();
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Draggable divider
+--------------------------------------------------------------------- */
+function initDivider(){
+  const divider = document.getElementById('divider');
+  const main = document.getElementById('main');
+  const editorPane = document.getElementById('editor-pane');
+  const panel = document.getElementById('panel');
+  let dragging = false;
+
+  divider.addEventListener('mousedown', (e) => {
+    dragging = true;
+    divider.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const rect = main.getBoundingClientRect();
+    let leftPct = ((e.clientX - rect.left) / rect.width) * 100;
+    leftPct = Math.min(80, Math.max(20, leftPct));
+    editorPane.style.flexBasis = leftPct + '%';
+    panel.style.flexBasis = (100 - leftPct) + '%';
+    if (editor) editor.layout();
+    fitAddon.fit();
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove('dragging');
+    document.body.style.cursor = '';
+    fitAddon.fit();
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Buttons
+--------------------------------------------------------------------- */
+function initButtons(){
+  document.getElementById('runBtn').addEventListener('click', runCode);
+  document.getElementById('debugBtn').addEventListener('click', () => runCode(true));
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    term.reset();
+    clearProblems();
+    printBanner();
+  });
+}
+
+function setRuntimeDot(state){ // 'ready' | 'busy' | 'err' | 'idle'
+  const dot = document.getElementById('runtimeDot');
+  dot.className = 'dot' + (state !== 'idle' ? ' ' + state : '');
+}
+function setRuntimeText(t){ document.getElementById('runtimeText').textContent = t; }
+function setStatus(t){ document.getElementById('statusMsg').textContent = t; }
+
+/* =========================================================================
+   PYODIDE WEB WORKER  (SharedArrayBuffer + Atomics for real stdin)
+   ========================================================================= */
+let pyWorker = null;
+let pyReady = false;
+let sabControl = null, controlView = null, sabData = null, dataView = null;
+const SAB_DATA_LEN = 4096; // max characters per line
+
+function initPyodideWorker(){
+  const workerSrc = `
+    let pyodide = null;
+    let ctrl = null, data = null;
+
+    async function boot(){
+      importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js');
+      pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' });
+
+      pyodide.setStdout({ batched: (msg) => postMessage({ type: 'stdout', data: msg + '\\n' }) });
+      pyodide.setStderr({ batched: (msg) => postMessage({ type: 'stderr', data: msg + '\\n' }) });
+
+      if (ctrl){
+        pyodide.setStdin({
+          stdin: () => {
+            // Signal main thread we need a line, then block synchronously.
+            Atomics.store(ctrl, 0, 1); // REQUESTING
+            postMessage({ type: 'input-request' });
+            Atomics.wait(ctrl, 0, 1);  // blocks worker thread until main writes data + sets state=2
+            const len = Atomics.load(ctrl, 1);
+            const chars = [];
+            for (let i = 0; i < len; i++) chars.push(String.fromCharCode(data[i]));
+            Atomics.store(ctrl, 0, 0); // reset to IDLE
+            return chars.join('');
+          }
+        });
+      }
+
+      postMessage({ type: 'ready' });
+    }
+
+    self.onmessage = async (e) => {
+      const msg = e.data;
+      if (msg.type === 'init'){
+        ctrl = new Int32Array(msg.sabControl);
+        data = new Uint16Array(msg.sabData);
+        boot().catch(err => postMessage({type:'boot-error', data: String(err)}));
+      } else if (msg.type === 'run'){
+        try {
+          await pyodide.loadPackagesFromImports(msg.code).catch(()=>{});
+          await pyodide.runPythonAsync(msg.code);
+          postMessage({ type: 'done' });
+        } catch (err) {
+          postMessage({ type: 'python-error', data: String(err && err.message ? err.message : err) });
+          postMessage({ type: 'done' });
+        }
+      }
+    };
+  `;
+  const blob = new Blob([workerSrc], { type: 'application/javascript' });
+  pyWorker = new Worker(URL.createObjectURL(blob));
+
+  if (SAB_SUPPORTED){
+    sabControl = new SharedArrayBuffer(8);
+    controlView = new Int32Array(sabControl);
+    sabData = new SharedArrayBuffer(SAB_DATA_LEN * 2);
+    dataView = new Uint16Array(sabData);
+  }
+
+  pyWorker.onmessage = (e) => {
+    const msg = e.data;
+    if (msg.type === 'ready'){
+      pyReady = true;
+      setRuntimeDot('ready');
+      setRuntimeText('Pyodide ready');
+    } else if (msg.type === 'stdout'){
+      writeAnsi(msg.data);
+    } else if (msg.type === 'stderr'){
+      writeAnsi('\x1b[31m' + msg.data + '\x1b[0m');
+    } else if (msg.type === 'input-request'){
+      handlePyInputRequest();
+    } else if (msg.type === 'python-error'){
+      writeAnsi('\x1b[1;31m' + msg.data + '\x1b[0m\n');
+      reportPythonError(msg.data);
+    } else if (msg.type === 'boot-error'){
+      setRuntimeDot('err');
+      setRuntimeText('Pyodide failed to load');
+      writeAnsi('\x1b[31mFailed to initialize Pyodide: ' + msg.data + '\x1b[0m\n');
+    } else if (msg.type === 'done'){
+      finishRun();
+    }
+  };
+
+  pyWorker.postMessage({ type: 'init', sabControl, sabData });
+  setRuntimeDot('busy');
+  setRuntimeText('Loading Pyodide…');
+}
+
+function handlePyInputRequest(){
+  // Called when the worker is blocked on Atomics.wait awaiting a line.
+  requestTerminalLine('', (line) => {
+    if (line === '__CTRL_C__') line = '';
+    const withNL = line + '\n';
+    for (let i = 0; i < withNL.length && i < SAB_DATA_LEN; i++){
+      dataView[i] = withNL.charCodeAt(i);
+    }
+    Atomics.store(controlView, 1, Math.min(withNL.length, SAB_DATA_LEN));
+    Atomics.store(controlView, 0, 2); // READY
+    Atomics.notify(controlView, 0);
+  });
+}
+
+function writeAnsi(s){ term.write(s.replace(/\n/g, '\r\n')); }
+
+/* ---------------------------------------------------------------------
+   Python error → Problems panel
+--------------------------------------------------------------------- */
+function reportPythonError(tracebackStr){
+  const lines = tracebackStr.trim().split('\n');
+  let lastLine = lines[lines.length - 1] || '';
+  let type = 'Error', message = lastLine;
+  const m = lastLine.match(/^(\w+(?:Error|Warning|Exception)):\s*(.*)$/);
+  if (m){ type = m[1]; message = m[2]; }
+  else {
+    const m2 = lastLine.match(/^(\w+):\s*(.*)$/);
+    if (m2){ type = m2[1]; message = m2[2]; }
+  }
+  let lineNo = null;
+  for (let i = lines.length - 1; i >= 0; i--){
+    const lm = lines[i].match(/line (\d+)/);
+    if (lm){ lineNo = parseInt(lm[1], 10); break; }
+  }
+  addProblem({ line: lineNo, type, message, severity: 'error' });
+}
+
+/* =========================================================================
+   JAVASCRIPT ENGINE (isolated eval, console + errors piped to terminal)
+   ========================================================================= */
+function runJavaScript(code){
+  const logs = [];
+  const origLog = console.log, origErr = console.error, origWarn = console.warn;
+  let hadError = false;
+
+  const fmt = (args) => args.map(a => {
+    if (typeof a === 'object'){
+      try { return JSON.stringify(a, null, 2); } catch(e){ return String(a); }
+    }
+    return String(a);
+  }).join(' ');
+
+  console.log = (...args) => { writeAnsi(fmt(args) + '\n'); };
+  console.error = (...args) => { writeAnsi('\x1b[31m' + fmt(args) + '\x1b[0m\n'); };
+  console.warn = (...args) => { writeAnsi('\x1b[33m' + fmt(args) + '\x1b[0m\n'); };
+
+  const prevOnError = window.onerror;
+  window.onerror = (message, source, lineno, colno, error) => {
+    hadError = true;
+    writeAnsi('\x1b[1;31mUncaught ' + message + '\x1b[0m\n');
+    addProblem({
+      line: lineno && lineno > 1 ? lineno - 2 : lineno,
+      col: colno,
+      type: error && error.name ? error.name : 'Error',
+      message: message,
+      severity: 'error'
+    });
+    return true;
+  };
+
+  try {
+    const wrapped = new Function(code);
+    wrapped();
+  } catch (err){
+    hadError = true;
+    writeAnsi('\x1b[1;31m' + (err.stack || err.message) + '\x1b[0m\n');
+    let lineNo = null, colNo = null;
+    if (err.stack){
+      const m = err.stack.match(/<anonymous>:(\d+):(\d+)/);
+      if (m){ lineNo = parseInt(m[1],10) - 2; colNo = parseInt(m[2],10); }
+    }
+    addProblem({
+      line: lineNo && lineNo > 0 ? lineNo : null,
+      col: colNo,
+      type: err.name || 'Error',
+      message: err.message,
+      severity: 'error'
+    });
+  } finally {
+    console.log = origLog; console.error = origErr; console.warn = origWarn;
+    window.onerror = prevOnError;
+  }
+  finishRun();
+}
+
+/* =========================================================================
+   JUDGE0 ENGINE (Java / C / C++)
+   ========================================================================= */
+const JUDGE0_BASE = 'https://ce.judge0.com';
+
+async function runViaJudge0(lang, code){
+  setStatus('Submitting to Judge0…');
+  writeAnsi('\x1b[36mCompiling & running via Judge0 CE…\x1b[0m\n');
+  try {
+    const submitRes = await fetch(`${JUDGE0_BASE}/submissions?base64_encoded=true&wait=false`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        language_id: JUDGE0_LANG_ID[lang],
+        source_code: btoa(unescape(encodeURIComponent(code))),
+        stdin: ''
+      })
+    });
+    if (!submitRes.ok) throw new Error(`Judge0 submission failed (HTTP ${submitRes.status})`);
+    const { token } = await submitRes.json();
+    if (!token) throw new Error('Judge0 did not return a submission token');
+
+    let result = null;
+    for (let attempt = 0; attempt < 25; attempt++){
+      await new Promise(r => setTimeout(r, 1000));
+      const pollRes = await fetch(`${JUDGE0_BASE}/submissions/${token}?base64_encoded=true`);
+      if (!pollRes.ok) throw new Error(`Judge0 polling failed (HTTP ${pollRes.status})`);
+      result = await pollRes.json();
+      if (result.status && result.status.id >= 3) break; // >=3 => finished (not queued/processing)
+    }
+    if (!result) throw new Error('Judge0 timed out waiting for a result');
+
+    const decode = (b64) => b64 ? decodeURIComponent(escape(atob(b64))) : '';
+    const stdout = decode(result.stdout);
+    const stderr = decode(result.stderr);
+    const compileOutput = decode(result.compile_output);
+    const statusDesc = result.status ? result.status.description : 'Unknown';
+
+    if (stdout) writeAnsi(stdout);
+    if (compileOutput){
+      writeAnsi('\x1b[31m' + compileOutput + '\x1b[0m\n');
+      parseCompilerErrors(lang, compileOutput);
+    }
+    if (stderr){
+      writeAnsi('\x1b[31m' + stderr + '\x1b[0m\n');
+      parseCompilerErrors(lang, stderr);
+    }
+    if (!stdout && !stderr && !compileOutput){
+      writeAnsi('\x1b[2m(no output)\x1b[0m\n');
+    }
+    writeAnsi(`\x1b[2m— finished: ${statusDesc}, ${result.time || '?'}s, ${Math.round((result.memory||0)/1024)}MB —\x1b[0m\n`);
+  } catch (err){
+    writeAnsi('\x1b[1;31m⚠ Remote compiler engine unreachable or rate-limited.\x1b[0m\n');
+    addProblem({
+      line: null, type: 'RuntimeEngineError',
+      message: `Judge0 request failed: ${err.message}. The public Judge0 CE endpoint may be rate-limited — try again shortly, or wire in your own Judge0 RapidAPI key.`,
+      severity: 'warning'
+    });
+    switchToPanel('problems');
+  } finally {
+    finishRun();
+  }
+}
+
+function parseCompilerErrors(lang, output){
+  const lines = output.split('\n');
+  let count = 0;
+  for (const line of lines){
+    // gcc/g++: main.c:5:3: error: message   |  javac: Main.java:5: error: message
+    let m = line.match(/^[^\s:]+:(\d+):(?:(\d+):)?\s*(error|warning|fatal error):\s*(.+)$/i);
+    if (!m){
+      m = line.match(/^[^\s:]+\.java:(\d+):\s*(error|warning):\s*(.+)$/i);
+      if (m){
+        addProblem({ line: parseInt(m[1],10), type: m[2] === 'error' ? 'CompileError' : 'CompileWarning', message: m[3], severity: m[2]==='error'?'error':'warning' });
+        count++;
+        continue;
+      }
+    }
+    if (m){
+      const sev = /error/i.test(m[3]) ? 'error' : 'warning';
+      addProblem({ line: parseInt(m[1],10), col: m[2]?parseInt(m[2],10):null, type: sev==='error'?'CompileError':'CompileWarning', message: m[4], severity: sev });
+      count++;
+    }
+  }
+  if (count === 0 && output.trim()){
+    addProblem({ line: null, type: 'RuntimeError', message: output.trim().slice(0,500), severity: 'error' });
+  }
+}
+
+/* =========================================================================
+   RUN ORCHESTRATION
+   ========================================================================= */
+function runCode(debug){
+  if (running) return;
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  clearProblems();
+  switchToPanel('terminal');
+  term.write('\r\n');
+  writeAnsi(`\x1b[2m$ running ${FILE_NAMES[currentLang]}${debug ? ' (debug mode)' : ''}...\x1b[0m\n`);
+  setStatus('Running…');
+  setRuntimeDot('busy');
+
+  const code = editor.getValue();
+
+  if (currentLang === 'python'){
+    if (!pyReady){
+      writeAnsi('\x1b[33mPyodide is still loading — please wait a moment and try again.\x1b[0m\n');
+      finishRun();
+      return;
+    }
+    pyWorker.postMessage({ type: 'run', code });
+  } else if (currentLang === 'javascript'){
+    runJavaScript(code);
+  } else if (JUDGE0_LANG_ID[currentLang]){
+    runViaJudge0(currentLang, code);
+  }
+}
+
+function finishRun(){
+  running = false;
+  document.getElementById('runBtn').disabled = false;
+  setRuntimeDot(pyReady ? 'ready' : 'idle');
+  setRuntimeText(pyReady ? 'Pyodide ready' : 'Idle');
+  setStatus(problems.length ? `Finished with ${problems.length} problem(s)` : 'Finished successfully');
+  if (problems.length) switchToPanel('problems');
+}
+</script>
+</body>
+</html>
